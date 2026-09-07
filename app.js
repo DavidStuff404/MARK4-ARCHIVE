@@ -7,7 +7,6 @@ const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
 const chatForm = document.getElementById("chat-form");
 const userInput = document.getElementById("user-input");
-const systemPromptInput = document.getElementById("system-prompt");
 const sendBtn = document.getElementById("send-btn");
 const loadBtn = document.getElementById("load-btn");
 
@@ -51,13 +50,10 @@ chatForm.addEventListener("submit", async (e) => {
 
     try {
 
-        const systemPromptText = systemPromptInput.value.trim();
-        const fullMessages = [];
-
-        if (systemPromptText) {
-            fullMessages.push({ role: "system", content: systemPromptText });
-        }
-        fullMessages.push(...chatHistory);
+        const fullMessages = [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...chatHistory
+        ];
 
         const reply = await engine.chat.completions.create({ messages: fullMessages });
         const botMessage = reply.choices[0].message.content;
