@@ -22,7 +22,7 @@ loadBtn.addEventListener("click", async () => {
     try {
         engine = await CreateMLCEngine(MODEL_ID, { initProgressCallback });
         
-        statusText.textContent = "Status: Model loaded! Ready to chat.";
+        statusText.textContent = "Status: Done! You can chat or something...";
         userInput.disabled = false;
         sendBtn.disabled = false;
         loadBtn.style.display = "none";
