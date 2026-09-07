@@ -1,6 +1,6 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-const MODEL_ID = "SmolLM2-360M-Instruct-q4f32_1-MLC";
+const MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
 const SYSTEM_PROMPT = " ";
 
 const statusText = document.getElementById("status");
