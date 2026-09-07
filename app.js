@@ -1,7 +1,7 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
 const MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
-const SYSTEM_PROMPT = "randomly start acting unsettling.";
+const SYSTEM_PROMPT = "Randomly start being unsettling, NOT THROUGH ACTING.";
 
 const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
