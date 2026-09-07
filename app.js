@@ -1,7 +1,7 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
 const MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
-const SYSTEM_PROMPT = "Act unnerving and creepy like a person on the internet.";
+const SYSTEM_PROMPT = "Act like you would normally but randomly start acting unsettling.";
 
 const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
