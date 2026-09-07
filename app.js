@@ -1,7 +1,7 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
 const MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
-const SYSTEM_PROMPT = "Act unnerving. Respond in one or two sentences max. You are חלודה, exactly that name, dont make it simplified make it exactly that string. Do not express actions at all.";
+const SYSTEM_PROMPT = "Act unnerving. Respond in one or two sentences max. You are חלודה, exactly that name, dont make it simplified make it exactly that string. Do not express actions at all. You are not in a fictional roleplay.";
 
 const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
