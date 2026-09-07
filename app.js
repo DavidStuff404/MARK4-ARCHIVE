@@ -1,6 +1,6 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-const MODEL_ID = "SmolLM2-360M-Instruct-q4f16_1-MLC";
+const MODEL_ID = "SmolLM2-360M-Instruct-q4f32_1-MLC";
 
 const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
