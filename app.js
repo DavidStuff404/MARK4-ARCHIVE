@@ -1,7 +1,7 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-const MODEL_ID = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
-const SYSTEM_PROMPT = "Randomly start being unsettling, NOT THROUGH ACTING.";
+const MODEL_ID = "Llama-3-8B-Instruct-q4f16_1-MLC";
+const SYSTEM_PROMPT = "Randomly start being unsettling, NOT THROUGH ACTING. FOR THE LOVE OF GOD STOP HAVING ROLEPLAY LIKE CONVERSATION WE DO NOT NEED THAT. ACT ONLY USING TEXT";
 
 const statusText = document.getElementById("status");
 const chatBox = document.getElementById("chat-box");
