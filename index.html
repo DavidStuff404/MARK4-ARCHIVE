@@ -1,115 +1,291 @@
-<!DOCTYPE html>
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat.</title>
-    <style>
-        body {
-            background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVxtGF_bwPOmTRkhTC1TbPg4aLdnwnCiDh35CiAuyVi5OOcdef6Ki52xk&s=10') #000;
-            background-size: cover;
-            color: #fff;
-            font-family: "Courier New", Courier, monospace;
-            max-width: 650px;
-            margin: 1.5rem auto;
-            padding: 1rem;
-            border: 4px ridge #fff;
-        }
-        .header-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            background-color: #111;
-            padding: 0.5rem 1rem;
-            border: 2px outset #fff;
-            margin-bottom: 1rem;
-        }
-        h1 {
-            margin: 0;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 1.8rem;
-            text-shadow: 1px 1px #000;
-        }
-        .subtext {
-            font-size: 0.85rem;
-            color: #ccc;
-            margin-bottom: 1rem;
-            font-weight: bold;
-        }
-        #chat-box {
-            border: 3px inset #fff;
-            height: 320px;
-            overflow-y: scroll;
-            margin-bottom: 1rem;
-            background: #111;
-            padding: 0.75rem;
-        }
-        .message {
-            margin-bottom: 0.75rem;
-            padding: 0.5rem;
-            border-bottom: 1px dashed #666;
-        }
-        .user { color: #ccc; }
-        .bot { color: #fff; }
-        .sender-name {
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 0.2rem;
-        }
-        #status {
-            font-size: 0.85rem;
-            color: #000;
-            margin-bottom: 0.75rem;
-            background: #fff;
-            padding: 0.4rem;
-            border: 1px solid #fff;
-        }
-        input[type="text"] {
-            padding: 0.5rem;
-            border: 2px inset #fff;
-            background-color: #111;
-            color: #fff;
-            font-family: "Courier New", Courier, monospace;
-        }
-        button {
-            padding: 0.5rem 1rem;
-            background: #fff;
-            color: #000;
-            font-family: "Courier New", Courier, monospace;
-            font-weight: bold;
-            border: 2px outset #fff;
-            cursor: pointer;
-        }
-        button:active {
-            border-style: inset;
-        }
-        button:disabled {
-            background: #333;
-            color: #777;
-            border-style: solid;
-            cursor: not-allowed;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Snake Game</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #050505;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+}
+h1 { margin: 0 0 8px; font-size: 24px; }
+#score { margin-bottom: 10px; font-size: 18px; }
+#game {
+    width: min(92vw, 600px);
+    height: min(92vw, 600px);
+    max-height: 65vh;
+    background: #000;
+    border: 2px solid #fff;
+    display: block;
+    image-rendering: pixelated;
+}
+.controls {
+    width: min(300px, 90vw);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+button {
+    height: 58px;
+    border: 2px solid #777;
+    border-radius: 12px;
+    background: #202020;
+    color: white;
+    font-size: 25px;
+    font-weight: bold;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+button:active { background: #444; }
+.up { grid-column: 2; }
+.left { grid-column: 1; grid-row: 2; }
+.down { grid-column: 2; grid-row: 2; }
+.right { grid-column: 3; grid-row: 2; }
+#restart {
+    grid-column: 1 / 4;
+    font-size: 18px;
+    height: 48px;
+}
+</style>
 </head>
 <body>
-    <div class="header-container">
-        <h1>Chat.</h1>
-    </div>
 
-    <p class="subtext">>>> IT TERMINAL v4.0 - LOCAL WEB EXECUTION <<<</p>
+<h1>Snake Game</h1>
+<div id="score">Score: 0 | High Score: 0</div>
+<canvas id="game" width="600" height="600"></canvas>
 
-    <div id="status">STATUS: Waiting for engine initialization...</div>
-    <div id="chat-box"></div>
+<div class="controls">
+    <button class="up" data-dir="up">▲</button>
+    <button class="left" data-dir="left">◀</button>
+    <button class="down" data-dir="down">▼</button>
+    <button class="right" data-dir="right">▶</button>
+    <button id="restart">RESTART</button>
+</div>
 
-    <form id="chat-form" style="display: flex; gap: 0.5rem;">
-        <input type="text" id="user-input" placeholder="Type command..." disabled style="flex-grow: 1;" required>
-        <button type="submit" id="send-btn" disabled>SEND</button>
-    </form>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
 
-    <button id="load-btn" style="width: 100%; margin-top: 1rem;">[ LOAD IT ENGINE (~130MB) ]</button>
+const SIZE = 600;
+const CELL = 20;
+const GRID = SIZE / CELL;
 
-    <script type="module" src="app.js"></script>
+let snake;
+let food;
+let direction;
+let nextDirection;
+let score;
+let highScore = Number(localStorage.getItem("snakeHighScore") || 0);
+let gameOver;
+let timer;
+
+function resetGame() {
+    snake = [{x: 15, y: 15}];
+    food = {x: 5, y: 5};
+    direction = null;
+    nextDirection = null;
+    score = 0;
+    gameOver = false;
+    placeFood();
+    updateScore();
+    draw();
+    restartTimer();
+}
+
+function setDirection(dir) {
+    if (gameOver) return;
+
+    const opposites = {
+        up: "down",
+        down: "up",
+        left: "right",
+        right: "left"
+    };
+
+    if (direction !== opposites[dir]) {
+        nextDirection = dir;
+    }
+}
+
+document.addEventListener("keydown", e => {
+    const keys = {
+        w: "up", ArrowUp: "up",
+        s: "down", ArrowDown: "down",
+        a: "left", ArrowLeft: "left",
+        d: "right", ArrowRight: "right"
+    };
+
+    if (keys[e.key]) {
+        e.preventDefault();
+        setDirection(keys[e.key]);
+    }
+
+    if (e.key === " " && gameOver) {
+        e.preventDefault();
+        resetGame();
+    }
+});
+
+document.querySelectorAll("[data-dir]").forEach(button => {
+    const handler = e => {
+        e.preventDefault();
+        setDirection(button.dataset.dir);
+    };
+    button.addEventListener("pointerdown", handler);
+});
+
+document.getElementById("restart").addEventListener("pointerdown", e => {
+    e.preventDefault();
+    resetGame();
+});
+
+function placeFood() {
+    do {
+        food = {
+            x: Math.floor(Math.random() * GRID),
+            y: Math.floor(Math.random() * GRID)
+        };
+    } while (snake.some(s => s.x === food.x && s.y === food.y));
+}
+
+function update() {
+    if (gameOver || !direction) return;
+
+    direction = nextDirection || direction;
+
+    const head = {...snake[0]};
+
+    if (direction === "up") head.y--;
+    if (direction === "down") head.y++;
+    if (direction === "left") head.x--;
+    if (direction === "right") head.x++;
+
+    if (
+        head.x < 0 || head.x >= GRID ||
+        head.y < 0 || head.y >= GRID ||
+        snake.some(s => s.x === head.x && s.y === head.y)
+    ) {
+        gameOver = true;
+        clearInterval(timer);
+        draw();
+        return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("snakeHighScore", highScore);
+        }
+        placeFood();
+        updateScore();
+    } else {
+        snake.pop();
+    }
+}
+
+function draw() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    // Grid
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= SIZE; i += CELL) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, SIZE);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(SIZE, i);
+        ctx.stroke();
+    }
+
+    // Food
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(
+        food.x * CELL + CELL / 2,
+        food.y * CELL + CELL / 2,
+        CELL / 2 - 2,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+
+    // Snake
+    snake.forEach((part, i) => {
+        ctx.fillStyle = i === 0 ? "white" : "gray";
+        ctx.fillRect(
+            part.x * CELL + 1,
+            part.y * CELL + 1,
+            CELL - 2,
+            CELL - 2
+        );
+    });
+
+    if (!direction && !gameOver) {
+        overlay("PRESS W/A/S/D\nOR USE THE BUTTONS");
+    }
+
+    if (gameOver) {
+        overlay("GAME OVER\nPRESS RESTART");
+    }
+}
+
+function overlay(text) {
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, 0, SIZE, SIZE);
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const lines = text.split("\n");
+    lines.forEach((line, i) => {
+        ctx.font = i === 0 ? "bold 40px Arial" : "22px Arial";
+        ctx.fillText(line, SIZE / 2, 275 + i * 50);
+    });
+}
+
+function updateScore() {
+    scoreEl.textContent =
+        `Score: ${score} | High Score: ${highScore}`;
+}
+
+function restartTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+        update();
+        draw();
+    }, 100);
+}
+
+resetGame();
+</script>
 </body>
 </html>
+'''
+
+path = Path("/mnt/data/snake_game.html")
+path.write_text(html, encoding="utf-8")
+print(f"Created: {path}")
