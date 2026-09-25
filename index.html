@@ -3,38 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pocket Vision AI</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#f0f2f5">
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f0f2f5; display: flex; flex-direction: column; height: 90vh; }
-        #chat-box { flex-grow: 1; border-radius: 12px; background: white; overflow-y: auto; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .msg { margin-bottom: 15px; padding: 12px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
-        .user { background: #007aff; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
-        .ai { background: #f1f1f1; color: black; margin-right: auto; border-bottom-left-radius: 4px; }
-        #status { color: #555; font-size: 0.85em; margin-bottom: 15px; text-align: center; font-weight: bold; background: #e9ecef; padding: 10px; border-radius: 8px; word-wrap: break-word; }
-        .controls { display: flex; flex-direction: column; gap: 10px; }
-        input[type="file"], input[type="text"], button { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { background: #007aff; color: white; font-weight: bold; border: none; cursor: pointer; transition: background 0.2s;}
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        img.preview { max-width: 100%; border-radius: 8px; margin-top: 5px; max-height: 200px; object-fit: contain; }
-    </style>
+    <title>Raw AI Interface</title>
 </head>
 <body>
-    <h2 style="text-align: center; margin-top: 0;">Pocket Vision AI</h2>
-    <div id="status">Starting WebGPU engine...</div>
-    
-    <div id="chat-box"></div>
-    
-    <div class="controls">
-        <input type="file" id="image-input" accept="image/*">
-        <input type="text" id="prompt-input" placeholder="Ask what's in the image...">
-        <button id="send-btn" disabled>Send to Local GPU</button>
-    </div>
 
-    <!-- Hidden canvas used for resizing images to save RAM -->
-    <canvas id="resize-canvas" style="display:none;"></canvas>
+    <h1>Raw AI Interface</h1>
+    <p>Status: <b id="status">Idle</b></p>
+    <hr>
 
-    <script type="module" src="app.js"></script>
+    <h3>Chat Output</h3>
+    <div id="chat-log" style="border: 1px solid black; padding: 10px; height: 300px; overflow-y: scroll; white-space: pre-wrap;"></div>
+
+    <hr>
+
+    <h3>Input</h3>
+    <form id="ai-form" onsubmit="return false;">
+        <label for="image-input">Select Image (Optional):</label><br>
+        <input type="file" id="image-input" accept="image/*"><br><br>
+
+        <label for="prompt-input">Prompt:</label><br>
+        <textarea id="prompt-input" rows="4" cols="50" placeholder="Type your prompt here..."></textarea><br><br>
+
+        <button type="button" id="send-btn" onclick="handleSend()">Send Request</button>
+    </form>
+
+    <script>
+        // API Keys extracted from Python script
+        const OPENROUTER_API_KEY = "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";
+        const GROQ_API_KEY = "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";
+
+        // Endpoints
+        const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+        const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+        // System Prompt
+        const SYSTEM_PROMPT = "Your name is Mark. You are a casual person. Dont try to use emojis.";
+
+        // Model Pools
+        let OPENROUTER_MODELS = [
+            "openrouter/free",
+            "google/gemini-2.0-flash-lite-001:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "qwen/qwen-2.5-coder-32b-instruct:free"
+        ];
+
+        const GROQ_MODELS = [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+            "meta-llama/llama-prompt-guard-2-86m",
+            "meta-llama/llama-prompt-guard-2-22m",
+            "openai/gpt-oss-safeguard-20b",
+            "canopylabs/orpheus-v1-english"
+        ];
+
+        // Convert file input to Base64 Data URL
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function appendToLog(sender, text) {
+            const chatLog = document.getElementById("chat-log");
+            chatLog.textContent += `[${sender}]: ${text}\n\n`;
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        async function queryOpenRouter(messages) {
+            const formattedMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+            
+            for (const model of OPENROUTER_MODELS) {
+                document.getElementById("status").innerText = `Trying OpenRouter model: ${model}...`;
+                try {
+                    const response = await fetch(OPENROUTER_API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": window.location.href,
+                            "X-Title": "Raw AI Client"
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: formattedMessages,
+                            temperature: 0
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const content = data.choices?.[0]?.message?.content;
+                        if (content && content.trim()) {
+                            return content.trim();
+                        }
+                    } else {
+                        console.warn(`OpenRouter model ${model} failed with HTTP ${response.status}`);
+                    }
+                } catch (err) {
+                    console.error(`OpenRouter error with model ${model}:`, err);
+                }
+            }
+            return null;
+        }
+
+        async function queryGroq(messages) {
+            const formattedMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+
+            for (const model of GROQ_MODELS) {
+                document.getElementById("status").innerText = `Trying Groq model: ${model}...`;
+                try {
+                    const response = await fetch(GROQ_API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${GROQ_API_KEY}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: formattedMessages,
+                            temperature: 0
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const content = data.choices?.[0]?.message?.content;
+                        if (content && content.trim()) {
+                            return content.trim();
+                        }
+                    } else {
+                        console.warn(`Groq model ${model} failed with HTTP ${response.status}`);
+                    }
+                } catch (err) {
+                    console.error(`Groq error with model ${model}:`, err);
+                }
+            }
+            return null;
+        }
+
+        async function masterQuery(messages) {
+            document.getElementById("status").innerText = "Querying OpenRouter...";
+            let reply = await queryOpenRouter(messages);
+            if (reply) return reply;
+
+            console.warn("OpenRouter models failed. Falling back to Groq...");
+            document.getElementById("status").innerText = "OpenRouter failed. Triggering Groq Fallback...";
+            reply = await queryGroq(messages);
+            if (reply) return reply;
+
+            return "idk";
+        }
+
+        async function handleSend() {
+            const promptInput = document.getElementById("prompt-input");
+            const imageInput = document.getElementById("image-input");
+            const sendBtn = document.getElementById("send-btn");
+
+            const promptText = promptInput.value.trim();
+            const file = imageInput.files[0];
+
+            if (!promptText && !file) return;
+
+            sendBtn.disabled = true;
+            let messageContent = [];
+
+            if (file) {
+                try {
+                    const base64Image = await fileToBase64(file);
+                    messageContent.push({
+                        type: "image_url",
+                        image_url: { url: base64Image }
+                    });
+                } catch (err) {
+                    alert("Failed to process image file.");
+                    sendBtn.disabled = false;
+                    return;
+                }
+            }
+
+            if (promptText) {
+                messageContent.push({
+                    type: "text",
+                    text: promptText
+                });
+            }
+
+            // User Display
+            appendToLog("User", promptText + (file ? " [Attached Image]" : ""));
+
+            // Build Message
+            const messages = [
+                {
+                    role: "user",
+                    content: messageContent.length === 1 && messageContent[0].type === "text" 
+                        ? promptText 
+                        : messageContent
+                }
+            ];
+
+            const reply = await masterQuery(messages);
+            
+            // Clean reasoning block tags if present
+            const cleanedReply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+            appendToLog("Mark", cleanedReply);
+
+            // Reset Input
+            promptInput.value = "";
+            imageInput.value = "";
+            document.getElementById("status").innerText = "Idle";
+            sendBtn.disabled = false;
+        }
+    </script>
 </body>
 </html>
