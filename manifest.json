@@ -1,0 +1,16 @@
+{
+    "name": "Local Pocket AI",
+    "short_name": "Pocket AI",
+    "description": "A fully local WebGPU Vision AI",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#f0f2f5",
+    "theme_color": "#007aff",
+    "icons": [
+        {
+            "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1024px-GitHub_Invertocat_Logo.svg.png",
+            "sizes": "1024x1024",
+            "type": "image/png"
+        }
+    ]
+}
