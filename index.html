@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local Pocket AI</title>
+    <title>Pocket Vision AI</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f0f2f5">
     <style>
@@ -12,7 +12,7 @@
         .msg { margin-bottom: 15px; padding: 12px; border-radius: 12px; max-width: 85%; word-wrap: break-word; }
         .user { background: #007aff; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
         .ai { background: #f1f1f1; color: black; margin-right: auto; border-bottom-left-radius: 4px; }
-        #status { color: #555; font-size: 0.9em; margin-bottom: 15px; text-align: center; font-weight: bold; background: #e9ecef; padding: 8px; border-radius: 8px;}
+        #status { color: #555; font-size: 0.85em; margin-bottom: 15px; text-align: center; font-weight: bold; background: #e9ecef; padding: 10px; border-radius: 8px; word-wrap: break-word; }
         .controls { display: flex; flex-direction: column; gap: 10px; }
         input[type="file"], input[type="text"], button { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { background: #007aff; color: white; font-weight: bold; border: none; cursor: pointer; transition: background 0.2s;}
@@ -21,8 +21,8 @@
     </style>
 </head>
 <body>
-    <h2 style="text-align: center; margin-top: 0;">Local Pocket AI</h2>
-    <div id="status">Loading Local AI...</div>
+    <h2 style="text-align: center; margin-top: 0;">Pocket Vision AI</h2>
+    <div id="status">Starting WebGPU engine...</div>
     
     <div id="chat-box"></div>
     
@@ -32,7 +32,9 @@
         <button id="send-btn" disabled>Send to Local GPU</button>
     </div>
 
-    <!-- Load our app logic -->
+    <!-- Hidden canvas used for resizing images to save RAM -->
+    <canvas id="resize-canvas" style="display:none;"></canvas>
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
