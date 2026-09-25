@@ -1,50 +1,80 @@
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-// Register Service Worker for Offline PWA Support
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('Service Worker Registered'))
-        .catch(err => console.error('Service Worker Error:', err));
+    navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
 }
 
-// UI Elements
 const statusText = document.getElementById('status');
 const chatBox = document.getElementById('chat-box');
 const imageInput = document.getElementById('image-input');
 const promptInput = document.getElementById('prompt-input');
 const sendBtn = document.getElementById('send-btn');
+const resizeCanvas = document.getElementById('resize-canvas');
 
 let engine;
-// 2B Vision model for 4GB RAM devices (iPhone 13, Redmi 13C)
+// 2B Vision model. We keep it, but we force it into a smaller memory box.
 const MODEL_ID = "Qwen2-VL-2B-Instruct-q4f16_1-MLC";
 
 async function initLocalAI() {
     try {
         if (!navigator.gpu) {
-            statusText.textContent = "Error: WebGPU is disabled. Use modern Chrome/Safari.";
+            statusText.textContent = "Error: WebGPU is disabled on this device/browser.";
             return;
         }
 
-        // Initialize the engine locally. WebLLM caches the heavy files permanently behind the scenes.
         engine = await CreateMLCEngine(MODEL_ID, {
             initProgressCallback: (progress) => {
-                statusText.textContent = `Offline Caching: ${progress.text}`;
+                statusText.textContent = `Caching Model: ${Math.round(progress.progress * 100)}% - ${progress.text}`;
+            },
+            // iOS RAM FIXES: These force WebGPU to use smaller memory buffers
+            engineConfig: {
+                max_new_tokens: 128,      // Keep replies short so generation doesn't crash
+                context_window_size: 768, // Shrink the memory buffer for context
+                prefill_chunk_size: 256   // CRITICAL FOR iOS: Prevents Safari WebGPU buffer overflow
             }
         });
-        statusText.textContent = "✅ Local AI is ready and cached!";
+        statusText.textContent = "✅ Local AI is ready! Hardware limits applied.";
         sendBtn.disabled = false;
     } catch (err) {
-        statusText.textContent = "Memory Error: Close background apps and reload.";
+        statusText.textContent = "Fatal Memory Error: Safari blocked the AI. Please reboot phone.";
         console.error(err);
     }
 }
 
-function getBase64(file) {
+// iOS RAM FIX: Downscale the image massively before giving it to the AI.
+// High-res iPhone camera photos will crash the memory otherwise.
+function getResizedBase64(file, maxSize = 420) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                
+                // Calculate new dimensions keeping aspect ratio
+                if (width > height && width > maxSize) {
+                    height *= maxSize / width;
+                    width = maxSize;
+                } else if (height > maxSize) {
+                    width *= maxSize / height;
+                    height = maxSize;
+                }
+                
+                // Draw to canvas and compress as JPEG
+                resizeCanvas.width = width;
+                resizeCanvas.height = height;
+                const ctx = resizeCanvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 0.7 quality JPEG saves huge amounts of memory over PNG
+                resolve(resizeCanvas.toDataURL('image/jpeg', 0.7)); 
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
     });
 }
 
@@ -76,7 +106,9 @@ sendBtn.addEventListener('click', async () => {
     let b64Image = null;
 
     if (file) {
-        b64Image = await getBase64(file);
+        statusText.textContent = "Compressing image for iOS...";
+        // Compress image before processing
+        b64Image = await getResizedBase64(file);
         messageContent.push({ type: "image_url", image_url: { url: b64Image } });
     }
     if (prompt) {
@@ -85,7 +117,7 @@ sendBtn.addEventListener('click', async () => {
 
     appendMessage('user', prompt, b64Image);
     promptInput.value = '';
-    statusText.textContent = "🧠 Thinking locally on GPU...";
+    statusText.textContent = "🧠 Thinking locally on GPU... (This may take a minute)";
 
     try {
         const reply = await engine.chat.completions.create({
@@ -96,12 +128,13 @@ sendBtn.addEventListener('click', async () => {
         statusText.textContent = "✅ Ready.";
     } catch (error) {
         appendMessage('ai', "Error: " + error.message);
-        statusText.textContent = "Error occurred.";
+        statusText.textContent = "Memory overflow during processing. Try a shorter prompt.";
+        console.error(error);
     }
     
     imageInput.value = '';
     sendBtn.disabled = false;
 });
 
-// Start the AI setup
+// Start the app
 initLocalAI();
